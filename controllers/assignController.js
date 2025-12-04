@@ -73,12 +73,12 @@ export const getNextShop = async (req, res) => {
     const { lat, lng } = req.query;
 
     const salesman = await User.findOne({ user_id: userId });
-    if (!salesman) return res.json({ shop: null });
+    if (!salesman) return res.json({ shops: [] });
 
     const segment = salesman.segment;
 
     const assigned = await AssignedShop.find({ user_id: userId });
-    if (!assigned.length) return res.json({ shop: null });
+    if (!assigned.length) return res.json({ shops: [] });
 
     const shopIds = assigned.map((s) => s.shop_id);
 
@@ -87,7 +87,7 @@ export const getNextShop = async (req, res) => {
       segment,
     });
 
-    if (!shops.length) return res.json({ shop: null });
+    if (!shops.length) return res.json({ shops: [] });
 
     const sorted = shops
       .map((s) => ({
@@ -96,7 +96,7 @@ export const getNextShop = async (req, res) => {
       }))
       .sort((a, b) => a.distance - b.distance);
 
-    return res.json({ shop: sorted[0] });
+    return res.json({ shops: sorted });
   } catch (err) {
     console.log("NEXT ERROR:", err);
     res.status(500).json({ error: "Server error" });
