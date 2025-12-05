@@ -1,8 +1,6 @@
-// controllers/logController.js
-
 import Log from "../models/Log.js";
 
-// GET ALL LOGS (MASTER ONLY)
+// MASTER → ALL LOGS
 export const getAllLogs = async (req, res) => {
   try {
     const logs = await Log.find().sort({ date: -1, time: -1 });
@@ -12,42 +10,54 @@ export const getAllLogs = async (req, res) => {
   }
 };
 
-
-// GET LOGS WITH FILTER (FOR MANAGER & SALESMAN)
+// UNIVERSAL FILTER (Salesman + Manager + Master)
 export const filterLogs = async (req, res) => {
   try {
     const { role, user_id, segment, filterSegment, result, startDate, endDate } = req.body;
 
     let query = {};
 
-    // ROLE BASED FILTER
-    if (role === "Salesman") {
-      query.user_id = user_id;
+    // 🔥 ROLE BASE FILTER
+    if (role === "salesman") {
+      query.user_id = user_id;  // salesman → own logs only
     }
 
-    if (role === "Manager") {
-      query.segment = segment.toUpperCase();
+    if (role === "manager") {
+      query.segment = segment.toLowerCase(); // manager → own segment logs only
     }
 
-    // FILTER PAGE → SEGMENT
-    if (filterSegment && filterSegment !== "All") {
-      query.segment = filterSegment.toUpperCase();
+    if (role === "master") {
+      // master → no log restriction
     }
 
-    // FILTER PAGE → RESULT
+    // 🔥 FILTER PAGE → SEGMENT (MASTER ONLY)
+    if (role === "master" && filterSegment && filterSegment !== "All") {
+      query.segment = filterSegment.toLowerCase();
+    }
+
+    // 🔥 FILTER PAGE → RESULT
     if (result && result !== "All") {
       query.result = result.toLowerCase();
     }
 
+    // NORMALIZE QUERY to lowercase
+    if (query.segment) query.segment = query.segment.toLowerCase();
+
     let logs = await Log.find(query);
 
-    // DATE RANGE FILTER
+    // 🔥 DATE RANGE FILTER
     if (startDate || endDate) {
       logs = logs.filter(l => {
-        const [d, m, y] = l.date.split("-");
+        const parts = l.date.includes("-")
+          ? l.date.split("-")
+          : l.date.split("/");
+
+        const [d, m, y] = parts;
         const logDate = new Date(`${y}-${m}-${d}`);
+
         if (startDate && logDate < new Date(startDate)) return false;
         if (endDate && logDate > new Date(endDate)) return false;
+
         return true;
       });
     }

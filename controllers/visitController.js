@@ -38,18 +38,23 @@ export const visitShop = async (req, res) => {
     // Save log
     const now = new Date();
     await Log.create({
-      user_id: salesman_id,
-      shop_id,
-      shop_name: shop.shop_name,
-      salesman: salesman.name,
-      date: now.toLocaleDateString("en-GB"),
-      time: now.toLocaleTimeString("en-GB"),
-      lat,
-      lng,
-      distance,
-      result,
-      segment: salesman.segment
-    });
+  user_id: salesman_id,
+  shop_id,
+  shop_name: shop.shop_name,
+  salesman: salesman.name,
+  date: now.toLocaleDateString("en-GB"),
+  time: now.toLocaleTimeString("en-GB"),
+  lat,
+  lng,
+  distance,
+  result,
+  segment: salesman.segment,
+
+  // added
+  photo_url: photo_url || "",
+  photo_lat: lat,
+  photo_lng: lng
+});
 
     // Remove completed shop from assignments
     await AssignedShop.deleteOne({ user_id: salesman_id, shop_id });

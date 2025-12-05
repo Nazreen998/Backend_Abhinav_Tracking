@@ -11,10 +11,20 @@ export const notifyVisitCompleted = (salesman, shop, result, distance) => {
     shop_name: shop.shop_name,
     result: result,
     distance: distance.toFixed(2),
+
+    segment: salesman.segment,
+    date: new Date().toLocaleDateString("en-GB"),
     time: new Date().toLocaleTimeString("en-GB"),
-    date: new Date().toLocaleDateString("en-GB")
+
+    // Master sees ALL
+    // Manager sees only this shop's segment
+    visible_to: {
+      master: true,
+      manager_segment: salesman.segment
+    }
   };
 };
+
 
 
 // Notification for pending shop approval

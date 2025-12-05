@@ -41,6 +41,8 @@ app.use("/api/pending", pendingShopRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/assign", assignRoutes);
 app.use("/api/visit", visitRoutes);
+app.use("/api/logs", logRoutes);
+
 
 // TEST ROUTE
 app.get("/", (req, res) => {

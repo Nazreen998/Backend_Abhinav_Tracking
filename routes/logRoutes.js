@@ -1,14 +1,20 @@
-// routes/logRoutes.js
-
 import express from "express";
-import { getAllLogs, filterLogs } from "../controllers/logController.js";
+import { auth } from "../middleware/auth.js";
+import {
+  getAllLogs,
+  getUserLogs,
+  getSegmentLogs
+} from "../controllers/logController.js";
 
 const router = express.Router();
 
-// MASTER → GET ALL LOGS
-router.get("/all", getAllLogs);
+// MASTER → all logs
+router.get("/all", auth(["master"]), getAllLogs);
 
-// FILTER LOGS FOR manager / salesman
-router.post("/filter", filterLogs);
+// SALESMAN → own logs
+router.get("/user/:userId", auth(["salesman", "manager", "master"]), getUserLogs);
+
+// MANAGER → segment logs
+router.get("/segment/:segment", auth(["manager", "master"]), getSegmentLogs);
 
 export default router;
