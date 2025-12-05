@@ -65,7 +65,7 @@ export const assignShops = async (req, res) => {
 };
 
 // -------------------------------------------------------------------
-// GET NEXT SHOP — CLEAN, DISTANCE BASED, SEGMENT FILTERED
+// GET NEXT SHOP — FULL SHOP DETAILS + PROPER SORTING
 // -------------------------------------------------------------------
 export const getNextShop = async (req, res) => {
   try {
@@ -77,31 +77,56 @@ export const getNextShop = async (req, res) => {
 
     const segment = salesman.segment;
 
-    const assigned = await AssignedShop.find({ user_id: userId });
+    // 1. Get assigned shops
+    const assigned = await AssignedShop.find({ user_id: userId }).sort({ sequence: 1 });
     if (!assigned.length) return res.json({ shops: [] });
 
     const shopIds = assigned.map((s) => s.shop_id);
 
-    const shops = await Shop.find({
-      shop_id: { $in: shopIds },
-      segment,
-    });
+    // 2. Get full shop details
+    const shopsDB = await Shop.find({ shop_id: { $in: shopIds }, segment });
 
-    if (!shops.length) return res.json({ shops: [] });
+    if (!shopsDB.length) return res.json({ shops: [] });
 
-    const sorted = shops
-      .map((s) => ({
-        ...s._doc,
-        distance: haversine(Number(lat), Number(lng), s.lat, s.lng),
-      }))
-      .sort((a, b) => a.distance - b.distance);
+    // 3. Merge assignment with full shop data
+    const merged = assigned
+      .map((a) => {
+        const shop = shopsDB.find((s) => s.shop_id === a.shop_id);
+        if (!shop) return null;
+
+        return {
+          shop_id: shop.shop_id,
+          shop_name: shop.shop_name,
+          address: shop.address,
+          lat: shop.lat,
+          lng: shop.lng,
+          sequence: a.sequence,
+          distance: haversine(Number(lat), Number(lng), shop.lat, shop.lng)
+        };
+      })
+      .filter(Boolean);
+
+    // 4. Sort by sequence (primary) then distance (secondary)
+    const sorted = merged.sort((a, b) => a.sequence - b.sequence);
 
     return res.json({ shops: sorted });
+
   } catch (err) {
     console.log("NEXT ERROR:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
+
+const fullShop = await Shop.findOne({ shop_id: a.shop_id });
+
+shops.push({
+  shop_id: a.shop_id,
+  shop_name: fullShop.shop_name,
+  address: fullShop.address,
+  lat: fullShop.lat,
+  lng: fullShop.lng,
+  sequence: a.sequence
+});
 
 // -------------------------------------------------------------------
 // DELETE ASSIGNED SHOP (MASTER/MANAGER)
