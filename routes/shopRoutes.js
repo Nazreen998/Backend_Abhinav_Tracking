@@ -28,3 +28,16 @@ router.put("/edit/:id", auth(["master", "manager"]), editShop);
 router.delete("/delete/:id", auth(["master", "manager"]), deleteShop);
 
 export default router;
+router.post("/unassign-shop", async (req, res) => {
+    try {
+        const { userId, shopId } = req.body;
+
+        await UserShopMapping.deleteOne({ userId, shopId });
+
+        return res.json({ success: true, message: "Shop unassigned successfully" });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ success: false, message: "Server Error" });
+    }
+});

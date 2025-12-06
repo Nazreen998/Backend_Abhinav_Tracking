@@ -42,6 +42,8 @@ app.use("/api/shop", shopRoutes);
 app.use("/api/assign", assignRoutes);
 app.use("/api/visit", visitRoutes);
 app.use("/api/logs", logRoutes);
+app.use("/api", require("./routes/shopRoutes"));
+
 app.use("/uploads", express.static("uploads"));
 
 

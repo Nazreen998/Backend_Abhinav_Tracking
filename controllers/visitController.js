@@ -33,9 +33,10 @@ export const visitShop = async (req, res) => {
     const { salesman_id, shop_id, lat, lng, photo_url } = req.body;
 
     if (!salesman_id || !shop_id || !lat || !lng) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "Missing required fields" });
+      return res.status(400).json({
+        status: "error",
+        message: "Missing fields"
+      });
     }
 
     const salesman = await User.findOne({ user_id: salesman_id });
@@ -44,7 +45,7 @@ export const visitShop = async (req, res) => {
     if (!salesman || !shop) {
       return res.status(404).json({
         status: "error",
-        message: "Invalid shop or salesman",
+        message: "Invalid shop or user"
       });
     }
 
@@ -53,7 +54,7 @@ export const visitShop = async (req, res) => {
 
     const now = new Date();
 
-    // Save log into DB
+    // Save log
     await Log.create({
       user_id: salesman_id,
       shop_id,
@@ -71,42 +72,41 @@ export const visitShop = async (req, res) => {
       photo_lng: lng,
     });
 
-    // Remove shop from assignment
-    await AssignedShop.deleteOne({ user_id: salesman_id, shop_id });
-
-    // Next shop finder
-    const nextAssignment = await AssignedShop.findOne({
-      user_id: salesman_id,
-    }).sort({ sequence: 1 });
-
-    if (!nextAssignment) {
-      return res.json({
-        status: "completed",
-        message: "All shops completed",
-        next_shop: null,
-      });
+    // MATCH → Remove shop
+    if (result === "match") {
+      await AssignedShop.deleteOne({ user_id: salesman_id, shop_id });
     }
 
-    const nextShop = await Shop.findOne({
-      shop_id: nextAssignment.shop_id,
+    // ALWAYS RETURN UPDATED SHOP LIST
+    const assigned = await AssignedShop.find({ user_id: salesman_id }).sort({
+      sequence: 1
     });
 
-    res.json({
-      status: "completed",
-      match_status: result,
+    const shops = [];
+    for (const a of assigned) {
+      const sh = await Shop.findOne({ shop_id: a.shop_id });
+      if (sh) {
+        shops.push({
+          shop_id: sh.shop_id,
+          shop_name: sh.shop_name,
+          address: sh.address,
+          lat: sh.lat,
+          lng: sh.lng,
+          sequence: a.sequence,
+        });
+      }
+    }
+
+    return res.json({
+      status: result,
       distance: distance.toFixed(2),
-      next_shop: {
-        shop_id: nextShop.shop_id,
-        shop_name: nextShop.shop_name,
-        lat: nextShop.lat,
-        lng: nextShop.lng,
-        sequence: nextAssignment.sequence,
-      },
+      shops
     });
+
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       status: "error",
-      message: err.message,
+      message: err.message
     });
   }
 };

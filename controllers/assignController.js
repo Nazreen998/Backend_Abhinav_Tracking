@@ -14,40 +14,60 @@ export const assignShops = async (req, res) => {
     const { salesman_id, shops, salesman_lat, salesman_lng } = req.body;
 
     if (!salesman_id || !Array.isArray(shops) || shops.length === 0) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "Missing or invalid fields" });
+      return res.status(400).json({
+        status: "error",
+        message: "Missing or invalid fields"
+      });
     }
 
-    // 1️⃣ Remove duplicates from incoming list
+    // Today’s date
+    const today = new Date().toISOString().slice(0, 10);
+
+    // 1️⃣ Remove duplicates
     const uniqueShopIds = [...new Set(shops)];
 
-    // 2️⃣ Fetch valid shop records from DB
+    // 2️⃣ CHECK SAME-DAY DUPLICATE ASSIGNING
+    const alreadyAssigned = await AssignedShop.find({
+      shop_id: { $in: uniqueShopIds },
+      date: today,
+      user_id: { $ne: salesman_id }
+    });
+
+    if (alreadyAssigned.length > 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "Some shops already assigned to another user today",
+        shops: alreadyAssigned.map(a => a.shop_id)
+      });
+    }
+
+    // 3️⃣ Fetch shop details
     const shopDetails = await Shop.find({ shop_id: { $in: uniqueShopIds } });
 
     if (shopDetails.length === 0) {
-      return res
-        .status(404)
-        .json({ status: "error", message: "No valid shops found" });
+      return res.status(404).json({
+        status: "error",
+        message: "No valid shops found"
+      });
     }
 
-    // 3️⃣ Add distance from salesman
+    // 4️⃣ Sort by distance
     const sortedList = shopDetails
-      .map((shop) => ({
+      .map(shop => ({
         ...shop._doc,
         distance: haversine(
           Number(salesman_lat),
           Number(salesman_lng),
           shop.lat,
           shop.lng
-        ),
+        )
       }))
       .sort((a, b) => a.distance - b.distance);
 
-    // 4️⃣ Clear existing assignments for that salesman
+    // 5️⃣ Clear OLD assignments for salesman
     await AssignedShop.deleteMany({ user_id: salesman_id });
 
-    // 5️⃣ Create new assignments in sorted order
+    // 6️⃣ Create new assignments
     let seq = 1;
     for (const shop of sortedList) {
       await AssignedShop.create({
@@ -55,19 +75,9 @@ export const assignShops = async (req, res) => {
         shop_id: shop.shop_id,
         sequence: seq,
         assigned_at: new Date().toLocaleDateString("en-GB"),
+        date: today // ← IMPORTANT
       });
       seq++;
-    }
-
-    // (Optional) Notify salesman – use only if notifyShopAssigned is implemented
-    try {
-      const salesman = await User.findOne({ user_id: salesman_id });
-      if (salesman) {
-        // Adjust parameters to your actual implementation
-        notifyShopAssigned(salesman, sortedList);
-      }
-    } catch (e) {
-      console.log("NOTIFY ERROR:", e.message);
     }
 
     return res.json({
@@ -76,15 +86,17 @@ export const assignShops = async (req, res) => {
       assigned: sortedList.map((s, i) => ({
         shop_id: s.shop_id,
         shop_name: s.shop_name,
-        sequence: i + 1,
         distance: s.distance.toFixed(2),
-      })),
+        sequence: i + 1
+      }))
     });
+
   } catch (err) {
-    console.error("ASSIGN ERROR:", err);
-    return res
-      .status(500)
-      .json({ status: "error", message: err.message });
+    console.log("ASSIGN ERROR:", err);
+    return res.status(500).json({
+      status: "error",
+      message: err.message
+    });
   }
 };
 
