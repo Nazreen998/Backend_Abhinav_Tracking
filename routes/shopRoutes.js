@@ -16,11 +16,10 @@ const router = express.Router();
 // MASTER → Add new shop
 router.post("/add", auth(["master"]), addShop);
 
-// MASTER + MANAGER → View all shops
-router.get("/all", auth(["master", "manager"]), getAllShops);
+// ⭐ Allow salesman also to read shops
+router.get("/all", auth(["master", "manager", "salesman"]), getAllShops);
 
-// MASTER + MANAGER → View shops by segment (pipes / fmcg)
-router.get("/segment/:segment", auth(["master", "manager"]), getShopsBySegment);
+router.get("/segment/:segment", auth(["master", "manager", "salesman"]), getShopsBySegment);
 
 // MASTER + MANAGER → Edit shop details
 router.put("/edit/:id", auth(["master", "manager"]), editShop);
