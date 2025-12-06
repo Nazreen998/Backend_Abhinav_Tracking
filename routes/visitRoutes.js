@@ -8,5 +8,7 @@ const router = express.Router();
 
 // Only Salesman can use this route
 router.post("/visitShop", auth(["salesman"]), visitShop);
+router.post("/uploadPhoto", auth(["salesman"]), uploadPhoto);
+
 
 export default router;

@@ -16,7 +16,7 @@ const logSchema = new mongoose.Schema({
   // NEW FIELDS 🔥
   photo_url: String,
   photo_lat: Number,
-  photo_lng: Number
+  photo_lng: Number,
 });
 
 export default mongoose.model("Log", logSchema);
