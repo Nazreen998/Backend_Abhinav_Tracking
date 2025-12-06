@@ -1,14 +1,15 @@
 // routes/visitRoutes.js
 
 import express from "express";
-import { visitShop } from "../controllers/visitController.js";
 import { auth } from "../middleware/auth.js";
+import { visitShop, uploadPhoto } from "../controllers/visitController.js";
 
 const router = express.Router();
 
-// Only Salesman can use this route
+// Only Salesman
 router.post("/visitShop", auth(["salesman"]), visitShop);
-router.post("/uploadPhoto", auth(["salesman"]), uploadPhoto);
 
+// Upload Photo
+router.post("/uploadPhoto", auth(["salesman"]), uploadPhoto);
 
 export default router;
